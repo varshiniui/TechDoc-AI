@@ -2,8 +2,9 @@ import re
 import faiss
 import pickle
 import os
+import numpy as np
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer, CrossEncoder
+from huggingface_hub import InferenceClient
 from groq import Groq
 
 # -----------------------------
@@ -14,6 +15,13 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+# Used to get embeddings from Hugging Face's hosted API instead of
+# loading the model locally — keeps memory usage low enough for
+# Render's free tier (loading sentence-transformers/torch locally
+# was causing out-of-memory crashes).
+hf_client = InferenceClient(token=os.getenv("HF_TOKEN"))
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
 # Load the FAISS index
 index = faiss.read_index("vector.index")
 
@@ -23,20 +31,29 @@ with open("chunks.pkl", "rb") as f:
     chunks = data["chunks"]
     chunk_sources = data["sources"]
 
-# Load the embedding model + reranker
-model = SentenceTransformer("all-MiniLM-L6-v2")
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+def embed_query(text):
+    """
+    Get the embedding for a single piece of text via Hugging Face's
+    hosted Inference API. Uses the same model (all-MiniLM-L6-v2) that
+    ingest.py used to build vector.index, so the vectors are directly
+    comparable.
+    """
+    embedding = hf_client.feature_extraction(text, model=EMBEDDING_MODEL)
+    return np.array(embedding, dtype="float32").reshape(1, -1)
 
 
-def search_documents(query, top_k=3, candidate_pool=10, relative_margin=6.0):
+def search_documents(query, top_k=3, candidate_pool=10):
     """
-    Retrieve a wider candidate pool with FAISS, then rerank with a
-    cross-encoder. Instead of an absolute score cutoff (which doesn't
-    generalize across different queries/topics), we keep only chunks
-    within `relative_margin` points of the top-scoring chunk for THIS
-    query. This adapts to each query's own score distribution.
+    Retrieve the top_k most relevant chunks for the query using FAISS
+    distance ranking directly.
+
+    Note: this previously reranked candidates with a local cross-encoder
+    for higher precision. That model was removed to fit Render's free
+    tier memory limit (512 MB) — both it and the embedding model relied
+    on PyTorch, which alone can use 400-600 MB just to import.
     """
-    query_embedding = model.encode([query])
+    query_embedding = embed_query(query)
     distances, indices = index.search(query_embedding, candidate_pool)
 
     candidates = []
@@ -49,18 +66,7 @@ def search_documents(query, top_k=3, candidate_pool=10, relative_margin=6.0):
                 "source_pdf": chunk_sources[i]
             })
 
-    if not candidates:
-        return []
-
-    pairs = [[query, c["text"]] for c in candidates]
-    scores = reranker.predict(pairs)
-
-    reranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
-
-    top_score = reranked[0][1]
-    filtered = [(c, s) for c, s in reranked if s >= top_score - relative_margin]
-
-    return [c for c, s in filtered[:top_k]]
+    return candidates[:top_k]
 
 
 def clean_citations(text):

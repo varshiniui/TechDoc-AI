@@ -1,6 +1,6 @@
 pymupdf
 faiss-cpu
-sentence-transformers
+huggingface_hub
 groq
 python-dotenv
 flask
