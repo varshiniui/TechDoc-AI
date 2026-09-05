@@ -1,0 +1,161 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #10131A;
+    color: #E7E9EE;
+    font-family: "IBM Plex Sans", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 70px 20px 100px;
+}
+
+.page {
+    width: 100%;
+    max-width: 640px;
+}
+
+.masthead h1 {
+    font-family: "Fraunces", serif;
+    font-weight: 600;
+    font-size: 40px;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.masthead .dot {
+    color: #D98E2E;
+}
+
+.tagline {
+    color: #8B93A6;
+    font-size: 15px;
+    margin: 8px 0 36px;
+    max-width: 46ch;
+}
+
+#ask-form {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid #262C38;
+    padding-bottom: 4px;
+}
+
+#question {
+    flex: 1;
+    padding: 10px 4px;
+    border: none;
+    background: transparent;
+    color: #E7E9EE;
+    font-size: 16px;
+    font-family: "IBM Plex Sans", sans-serif;
+}
+
+#question:focus {
+    outline: none;
+}
+
+#question::placeholder {
+    color: #565E70;
+}
+
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 4px;
+    background: #D98E2E;
+    color: #10131A;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #C77E20;
+}
+
+.hidden {
+    display: none;
+}
+
+#loading {
+    margin-top: 24px;
+    color: #8B93A6;
+    font-style: italic;
+    font-family: "Fraunces", serif;
+}
+
+#result {
+    margin-top: 44px;
+}
+
+.label {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    color: #8B93A6;
+    font-size: 15px;
+    margin: 0 0 12px;
+}
+
+.label-sources {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #262C38;
+}
+
+.answer p {
+    line-height: 1.65;
+    font-size: 16px;
+    margin: 0 0 14px;
+}
+
+.answer ul {
+    margin: 0 0 14px;
+    padding-left: 20px;
+}
+
+.answer li {
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.cite {
+    color: #D98E2E;
+    font-weight: 600;
+    font-size: 12px;
+    margin-left: 1px;
+}
+
+.footnote {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.fn-num {
+    flex: 0 0 28px;
+    color: #D98E2E;
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 600;
+}
+
+.fn-body {
+    color: #B6BCC9;
+}
+
+.fn-body em {
+    color: #8B93A6;
+    font-style: normal;
+    font-weight: 500;
+}
+
+#error {
+    margin-top: 28px;
+    color: #E29A78;
+    font-size: 15px;
+}

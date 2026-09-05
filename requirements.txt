@@ -1,0 +1,6 @@
+pymupdf
+faiss-cpu
+sentence-transformers
+groq
+python-dotenv
+flask

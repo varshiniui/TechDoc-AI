@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TechDoc</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="page">
+        <header class="masthead">
+            <h1>TechDoc<span class="dot">.</span></h1>
+            <p class="tagline">Ask your technical PDFs. Every answer points back to where it came from.</p>
+        </header>
+
+        <form id="ask-form">
+            <input
+                type="text"
+                id="question"
+                placeholder="How can CUDA performance be optimized?"
+                autocomplete="off"
+                required
+            >
+            <button type="submit">Ask</button>
+        </form>
+
+        <div id="loading" class="hidden">Reading the documents…</div>
+
+        <section id="result" class="hidden">
+            <p class="label">Answer</p>
+            <div id="answer-body" class="answer"></div>
+
+            <p class="label label-sources">Sources</p>
+            <div id="footnotes"></div>
+        </section>
+
+        <div id="error" class="hidden"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById("ask-form");
+        const loading = document.getElementById("loading");
+        const result = document.getElementById("result");
+        const errorBox = document.getElementById("error");
+        const answerBody = document.getElementById("answer-body");
+        const footnotes = document.getElementById("footnotes");
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        function styleCitations(text) {
+    return text.replace(/[\[\u3010]Source ([\d,\s]+)[\]\u3011]/g, (match, nums) => {
+        const parts = nums.split(",").map(n => n.trim()).filter(Boolean);
+        return parts.map(n => `<sup class="cite">${n}</sup>`).join(",");
+    });
+}
+
+        function renderAnswer(raw) {
+            let text = escapeHtml(raw);
+            text = styleCitations(text);
+            text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+            const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+            let html = "";
+            let inList = false;
+
+            for (const line of lines) {
+                if (/^[*-]\s+/.test(line)) {
+                    if (!inList) { html += "<ul>"; inList = true; }
+                    html += `<li>${line.replace(/^[*-]\s+/, "")}</li>`;
+                } else {
+                    if (inList) { html += "</ul>"; inList = false; }
+                    html += `<p>${line}</p>`;
+                }
+            }
+            if (inList) html += "</ul>";
+            return html;
+        }
+
+        function renderFootnotes(sources) {
+            footnotes.innerHTML = "";
+            sources.forEach(s => {
+                const row = document.createElement("div");
+                row.className = "footnote";
+                row.innerHTML = `
+                    <span class="fn-num">${s.chunk_id}</span>
+                    <span class="fn-body"><em>${s.source_pdf}</em> — ${escapeHtml(s.preview)}…</span>
+                `;
+                footnotes.appendChild(row);
+            });
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const question = document.getElementById("question").value.trim();
+            if (!question) return;
+
+            result.classList.add("hidden");
+            errorBox.classList.add("hidden");
+            loading.classList.remove("hidden");
+
+            try {
+                const response = await fetch("/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+                loading.classList.add("hidden");
+
+                if (!response.ok || data.message) {
+                    errorBox.textContent = data.error || data.message || "Something went wrong.";
+                    errorBox.classList.remove("hidden");
+                    return;
+                }
+
+                answerBody.innerHTML = renderAnswer(data.answer);
+                renderFootnotes(data.sources);
+                result.classList.remove("hidden");
+
+            } catch (err) {
+                loading.classList.add("hidden");
+                errorBox.textContent = "Failed to reach the server.";
+                errorBox.classList.remove("hidden");
+            }
+        });
+    </script>
+</body>
+</html>
