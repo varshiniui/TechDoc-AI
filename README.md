@@ -4,7 +4,7 @@ A Retrieval-Augmented Generation (RAG) system that answers questions about your 
 
 **Live demo:** https://techdoc-ai-nuie.onrender.com/
 
-> Hosted on Render's free tier — the first request after a period of inactivity may take 20–40 seconds to wake up.
+> Hosted on Render's free tier the first request after a period of inactivity may take 20–40 seconds to wake up.
 
 ---
 
@@ -12,7 +12,7 @@ A Retrieval-Augmented Generation (RAG) system that answers questions about your 
 
 TechDoc-AI lets you drop technical PDFs into a `data/` folder, builds a searchable knowledge base out of them, and answers natural-language questions using only the content of those documents. Every answer cites the specific source chunk it came from, so responses are traceable rather than hallucinated.
 
-It was built to explore a full RAG pipeline end-to-end: document ingestion, chunking, embedding, vector search, and grounded LLM generation — plus the practical constraints of deploying that pipeline on limited infrastructure.
+It was built to explore a full RAG pipeline end-to-end: document ingestion, chunking, embedding, vector search, and grounded LLM generation plus the practical constraints of deploying that pipeline on limited infrastructure.
 
 ## Features
 
