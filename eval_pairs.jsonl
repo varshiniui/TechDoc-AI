@@ -1,0 +1,20 @@
+{"question": "What does the DISTINCT keyword do when used in a SQL query?", "expected_chunk_id": 477, "source": "DBMS_Notes.pdf"}
+{"question": "What does the function V : B → ℝ assign to board states?", "expected_chunk_id": 207, "source": "machine_learning.pdf"}
+{"question": "What must be done to legally reproduce information from this NVIDIA specification?", "expected_chunk_id": 162, "source": "gpu.pdf"}
+{"question": "What does it mean for a decomposition to be dependency‑preserving?", "expected_chunk_id": 529, "source": "DBMS_Notes.pdf"}
+{"question": "How can you display a normalized confusion matrix that highlights the major error classifications using scikit-learn?", "expected_chunk_id": 290, "source": "machine_learning.pdf"}
+{"question": "What is the precision‑recall trade‑off and how should it be balanced?", "expected_chunk_id": 275, "source": "machine_learning.pdf"}
+{"question": "How were the original NIST digit images size‑normalized and centered to produce the final 28×28 pixel images?", "expected_chunk_id": 264, "source": "machine_learning.pdf"}
+{"question": "How can the version space be represented in the EnjoySport task?", "expected_chunk_id": 221, "source": "machine_learning.pdf"}
+{"question": "What potential problems can arise when we store only the projections of SNLRWH tuples onto SNLRH and RW after decomposition?", "expected_chunk_id": 527, "source": "DBMS_Notes.pdf"}
+{"question": "What factors determine which machine learning algorithm should be selected?", "expected_chunk_id": 202, "source": "machine_learning.pdf"}
+{"question": "How can you insert a $200 savings account for all loan customers of the Perryridge branch, using the loan number as the account number?", "expected_chunk_id": 496, "source": "DBMS_Notes.pdf"}
+{"question": "What are the possible ways to store a data entry k* in an index?", "expected_chunk_id": 606, "source": "DBMS_Notes.pdf"}
+{"question": "When should an address be modeled as an entity rather than as an attribute in an ER diagram?", "expected_chunk_id": 429, "source": "DBMS_Notes.pdf"}
+{"question": "What are the main options to fix underfitting in a machine learning model?", "expected_chunk_id": 194, "source": "machine_learning.pdf"}
+{"question": "What is the syntax for the SAVEPOINT command in SQL?", "expected_chunk_id": 452, "source": "DBMS_Notes.pdf"}
+{"question": "What hypothesis does a learning algorithm that minimizes squared error produce when the noise distribution is assumed to be normal?", "expected_chunk_id": 366, "source": "machine_learning.pdf"}
+{"question": "What is the difference between a traditional programming approach and a machine learning approach for spam filter detection?", "expected_chunk_id": 166, "source": "machine_learning.pdf"}
+{"question": "What is machine learning?", "expected_chunk_id": 165, "source": "machine_learning.pdf"}
+{"question": "What condition must a hypothesis h satisfy to correctly identify the target concept c over the instance set X?", "expected_chunk_id": 197, "source": "machine_learning.pdf"}
+{"question": "What are the advantages of using RandomizedSearchCV compared to GridSearchCV?", "expected_chunk_id": 261, "source": "machine_learning.pdf"}
