@@ -4,7 +4,7 @@ import pickle
 import os
 import re
 from collections import Counter
-from sentence_transformers import SentenceTransformer
+
 
 
 def split_into_sentences(text):
@@ -138,6 +138,7 @@ def build_index_from_data_dir(data_dir="data"):
     print("\nTotal chunks across all PDFs:", len(all_chunks))
 
     print("\nLoading embedding model...")
+    from sentence_transformers import SentenceTransformer
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
     embeddings = model.encode(all_chunks, show_progress_bar=True)
