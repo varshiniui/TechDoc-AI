@@ -102,75 +102,65 @@ def strip_running_headers_footers(pages, min_page_fraction=0.3):
     return cleaned_pages, boilerplate_lines
 
 
-# -----------------------------
-# 1. Read every PDF in data/
-# -----------------------------
-
-data_dir = "data"
-pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")]
-
-print(f"Found {len(pdf_files)} PDF(s): {pdf_files}")
-
-all_chunks = []
-chunk_sources = []
-
-for pdf_file in pdf_files:
-    pdf_path = os.path.join(data_dir, pdf_file)
-
+def process_single_pdf(pdf_path):
+    """
+    Run one PDF through the same extraction -> header/footer stripping
+    -> chunking -> dedup pipeline used for full ingestion, and return
+    just its chunks. Used both by full ingest and single-file uploads.
+    """
     pages = extract_pages(pdf_path)
     cleaned_pages, removed_lines = strip_running_headers_footers(pages)
-
-    if removed_lines:
-        print(f"  {pdf_file}: removed {len(removed_lines)} repeated header/footer line(s):")
-        for line in list(removed_lines)[:5]:
-            print(f"    - {line!r}")
-
     full_text = "\n".join(cleaned_pages)
 
     file_chunks = chunk_text(full_text, max_chars=1000, overlap_sentences=2)
-    before = len(file_chunks)
-
     file_chunks = deduplicate_chunks(file_chunks)
-    after = len(file_chunks)
 
-    print(f"  {pdf_file}: {len(full_text)} characters, "
-          f"{before} chunks -> {after} after dedup")
-
-    all_chunks.extend(file_chunks)
-    chunk_sources.extend([pdf_file] * len(file_chunks))
-
-print("\nTotal chunks across all PDFs:", len(all_chunks))
+    return file_chunks
 
 
-# -----------------------------
-# 2. Create embeddings
-# -----------------------------
+def build_index_from_data_dir(data_dir="data"):
+    pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")]
 
-print("\nLoading embedding model...")
-model = SentenceTransformer("all-MiniLM-L6-v2")
+    print(f"Found {len(pdf_files)} PDF(s): {pdf_files}")
 
-embeddings = model.encode(all_chunks, show_progress_bar=True)
+    all_chunks = []
+    chunk_sources = []
 
-print("Embeddings created!")
-print("Embedding shape:", embeddings.shape)
+    for pdf_file in pdf_files:
+        pdf_path = os.path.join(data_dir, pdf_file)
+        file_chunks = process_single_pdf(pdf_path)
+
+        print(f"  {pdf_file}: {len(file_chunks)} chunks after dedup")
+
+        all_chunks.extend(file_chunks)
+        chunk_sources.extend([pdf_file] * len(file_chunks))
+
+    print("\nTotal chunks across all PDFs:", len(all_chunks))
+
+    print("\nLoading embedding model...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    embeddings = model.encode(all_chunks, show_progress_bar=True)
+
+    print("Embeddings created!")
+    print("Embedding shape:", embeddings.shape)
+
+    dimension = embeddings.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embeddings)
+
+    print("FAISS index created!")
+    print("Vectors stored:", index.ntotal)
+
+    faiss.write_index(index, "vector.index")
+
+    with open("chunks.pkl", "wb") as f:
+        pickle.dump({"chunks": all_chunks, "sources": chunk_sources}, f)
+
+    print("\nSaved:")
+    print("- vector.index")
+    print("- chunks.pkl")
 
 
-# -----------------------------
-# 3. Store in FAISS
-# -----------------------------
-
-dimension = embeddings.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(embeddings)
-
-print("FAISS index created!")
-print("Vectors stored:", index.ntotal)
-
-faiss.write_index(index, "vector.index")
-
-with open("chunks.pkl", "wb") as f:
-    pickle.dump({"chunks": all_chunks, "sources": chunk_sources}, f)
-
-print("\nSaved:")
-print("- vector.index")
-print("- chunks.pkl")
+if __name__ == "__main__":
+    build_index_from_data_dir()

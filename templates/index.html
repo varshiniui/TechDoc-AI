@@ -14,6 +14,19 @@
             <p class="tagline">Ask your technical PDFs. Every answer points back to where it came from.</p>
         </header>
 
+        <div class="upload-row">
+            <label for="pdf-file" class="upload-label">+ Add a PDF to the library</label>
+            <input type="file" id="pdf-file" accept="application/pdf" class="hidden-input">
+            <span id="upload-status"></span>
+        </div>
+
+        <div class="scope-row">
+            <label for="doc-scope" class="scope-label">Search:</label>
+            <select id="doc-scope">
+                <option value="">All documents</option>
+            </select>
+        </div>
+
         <form id="ask-form">
             <input
                 type="text"
@@ -45,6 +58,9 @@
         const errorBox = document.getElementById("error");
         const answerBody = document.getElementById("answer-body");
         const footnotes = document.getElementById("footnotes");
+        const pdfInput = document.getElementById("pdf-file");
+        const uploadStatus = document.getElementById("upload-status");
+        const docScope = document.getElementById("doc-scope");
 
         function escapeHtml(str) {
             return str
@@ -54,11 +70,11 @@
         }
 
         function styleCitations(text) {
-    return text.replace(/[\[\u3010]Source ([\d,\s]+)[\]\u3011]/g, (match, nums) => {
-        const parts = nums.split(",").map(n => n.trim()).filter(Boolean);
-        return parts.map(n => `<sup class="cite">${n}</sup>`).join(",");
-    });
-}
+            return text.replace(/[\[\u3010](?:Source\s*)?([\d,\s]+)[\]\u3011]/g, (match, nums) => {
+                const parts = nums.split(",").map(n => n.trim()).filter(Boolean);
+                return parts.map(n => `<sup class="cite">${n}</sup>`).join(",");
+            });
+        }
 
         function renderAnswer(raw) {
             let text = escapeHtml(raw);
@@ -95,6 +111,65 @@
             });
         }
 
+        async function loadDocuments() {
+            try {
+                const response = await fetch("/documents");
+                const data = await response.json();
+
+                const currentValue = docScope.value;
+                docScope.innerHTML = '<option value="">All documents</option>';
+
+                data.documents.forEach(doc => {
+                    const opt = document.createElement("option");
+                    opt.value = doc;
+                    opt.textContent = doc;
+                    docScope.appendChild(opt);
+                });
+
+                // Keep the previously selected document scoped, if it still exists
+                if ([...docScope.options].some(o => o.value === currentValue)) {
+                    docScope.value = currentValue;
+                }
+            } catch (err) {
+                // Silently fall back to "All documents" if this fails
+            }
+        }
+
+        loadDocuments();
+
+        pdfInput.addEventListener("change", async () => {
+            const file = pdfInput.files[0];
+            if (!file) return;
+
+            uploadStatus.textContent = "Reading and indexing…";
+            uploadStatus.classList.remove("error");
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    uploadStatus.textContent = data.error || "Upload failed.";
+                    uploadStatus.classList.add("error");
+                    return;
+                }
+
+                uploadStatus.textContent = data.message;
+                loadDocuments();
+            } catch (err) {
+                uploadStatus.textContent = "Failed to reach the server.";
+                uploadStatus.classList.add("error");
+            } finally {
+                pdfInput.value = "";
+            }
+        });
+
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const question = document.getElementById("question").value.trim();
@@ -108,7 +183,7 @@
                 const response = await fetch("/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question })
+                    body: JSON.stringify({ question, source: docScope.value })
                 });
 
                 const data = await response.json();

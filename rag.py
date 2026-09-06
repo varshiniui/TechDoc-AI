@@ -6,6 +6,7 @@ import numpy as np
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 from groq import Groq
+from ingest import process_single_pdf
 
 # -----------------------------
 # Setup
@@ -32,42 +33,66 @@ with open("chunks.pkl", "rb") as f:
     chunk_sources = data["sources"]
 
 
+def embed_texts(texts):
+    """
+    Get embeddings for a list of texts via Hugging Face's hosted
+    Inference API in one batched call. Used for both querying (via
+    embed_query) and indexing new uploaded chunks, so all vectors
+    stay comparable in the same FAISS index.
+    """
+    embeddings = hf_client.feature_extraction(texts, model=EMBEDDING_MODEL)
+    return np.array(embeddings, dtype="float32")
+
+
 def embed_query(text):
     """
-    Get the embedding for a single piece of text via Hugging Face's
-    hosted Inference API. Uses the same model (all-MiniLM-L6-v2) that
-    ingest.py used to build vector.index, so the vectors are directly
-    comparable.
+    Get the embedding for a single piece of text.
     """
-    embedding = hf_client.feature_extraction(text, model=EMBEDDING_MODEL)
-    return np.array(embedding, dtype="float32").reshape(1, -1)
+    return embed_texts([text])
 
 
-def search_documents(query, top_k=3, candidate_pool=10):
+
+def search_documents(query, top_k=6, candidate_pool=20, distance_margin=0.35, source_filter=None):
     """
-    Retrieve the top_k most relevant chunks for the query using FAISS
-    distance ranking directly.
-
-    Note: this previously reranked candidates with a local cross-encoder
-    for higher precision. That model was removed to fit Render's free
-    tier memory limit (512 MB) — both it and the embedding model relied
-    on PyTorch, which alone can use 400-600 MB just to import.
+    Retrieve candidates via FAISS, optionally scoped to a single source
+    PDF, then filter out results that are much farther from the query
+    than the closest match. FAISS's L2 distance is free (already
+    computed by the search) — this gives some quality filtering
+    without needing a reranker model.
     """
     query_embedding = embed_query(query)
     distances, indices = index.search(query_embedding, candidate_pool)
 
     candidates = []
-    for i in indices[0]:
+    for dist, i in zip(distances[0], indices[0]):
         i = int(i)
-        if i < len(chunks):
-            candidates.append({
-                "chunk_id": i,
-                "text": chunks[i],
-                "source_pdf": chunk_sources[i]
-            })
+        if i >= len(chunks):
+            continue
+        if source_filter and chunk_sources[i] != source_filter:
+            continue
+        candidates.append({
+            "chunk_id": i,
+            "text": chunks[i],
+            "source_pdf": chunk_sources[i],
+            "distance": float(dist)
+        })
 
-    return candidates[:top_k]
+    if not candidates:
+        return []
 
+    best_distance = candidates[0]["distance"]
+    filtered = [c for c in candidates if c["distance"] <= best_distance + distance_margin]
+
+    return filtered[:top_k]
+     
+
+
+def list_available_documents():
+    """
+    Return the sorted, deduplicated list of source PDFs currently
+    indexed, so the UI can offer a document-scope filter.
+    """
+    return sorted(set(chunk_sources))
 
 def clean_citations(text):
     """
@@ -86,13 +111,18 @@ def generate_answer(question, context_chunks):
     context_chunks is a list of dicts: {"chunk_id": int, "text": str, "source_pdf": str}
     """
 
-    # Build context with labeled sources so the model can reference them
     context = "\n\n".join(
         f"[Source {c['chunk_id']}]\n{c['text']}" for c in context_chunks
     )
 
-    prompt = f"""You are a helpful technical assistant. Answer the question using ONLY the context below.
-When you cite sources, group them in a single bracket using plain ASCII brackets like [Source 3, 7] — never use full-width brackets 【 】.
+    prompt = f"""You are a helpful technical assistant. Explain things in plain, simple language, as if teaching a student who is new to the topic. Avoid unnecessary jargon; when you must use a technical term, briefly explain it in everyday words.
+
+Answer the question using ONLY the context below.
+
+Citation format rules (follow exactly):
+- Always write citations as [Source N] or [Source N, M] using plain square brackets and the word "Source".
+- Never drop the word "Source". Never use full-width brackets 【 】.
+
 If the answer isn't in the context, say you don't have enough information.
 
 Context:
@@ -113,6 +143,31 @@ Answer:"""
 
     answer = response.choices[0].message.content
     return clean_citations(answer)
+
+
+def add_pdf_to_index(pdf_path, filename):
+    """
+    Process a newly uploaded PDF with the same pipeline as ingest.py,
+    embed its chunks via the Hugging Face Inference API, and append
+    them to the already-loaded FAISS index and chunk store, then
+    persist both to disk.
+    """
+    new_chunks = process_single_pdf(pdf_path)
+
+    if not new_chunks:
+        return 0
+
+    new_embeddings = embed_texts(new_chunks)
+    index.add(new_embeddings)
+
+    chunks.extend(new_chunks)
+    chunk_sources.extend([filename] * len(new_chunks))
+
+    faiss.write_index(index, "vector.index")
+    with open("chunks.pkl", "wb") as f:
+        pickle.dump({"chunks": chunks, "sources": chunk_sources}, f)
+
+    return len(new_chunks)
 
 
 if __name__ == "__main__":

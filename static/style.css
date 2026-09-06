@@ -159,3 +159,54 @@ button:hover {
     color: #E29A78;
     font-size: 15px;
 }
+.upload-row {
+    margin-bottom: 28px;
+}
+
+.upload-label {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    color: #8B93A6;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 1px dashed #383F4D;
+    padding-bottom: 2px;
+}
+
+.upload-label:hover {
+    color: #D98E2E;
+    border-color: #D98E2E;
+}
+
+.hidden-input {
+    display: none;
+}
+
+#upload-status {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #8B93A6;
+}
+
+#upload-status.error {
+    color: #E29A78;
+}
+.scope-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #8B93A6;
+}
+
+#doc-scope {
+    background: #161A22;
+    color: #E7E9EE;
+    border: 1px solid #262C38;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 13px;
+}
